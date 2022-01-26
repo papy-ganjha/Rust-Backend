@@ -1,0 +1,1 @@
+docker run -v $(pwd):/app --name rust --rm -it -p 7878:7878 rust_docker
