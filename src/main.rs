@@ -1,48 +1,28 @@
-use std::fs;
-use std::io::prelude::*;
-use std::net::TcpListener;
-use std::net::TcpStream;
-use std::thread;
-use std::time::Duration;
+#[macro_use] extern crate rocket;
+use rocket::{Build, Rocket};
+use rocket::fs::{NamedFile, relative};
+use std::path::{PathBuf, Path};
 
-fn main() {
-    println!("Listenning on the port 7878...");
-    let listener = TcpListener::bind("0.0.0.0:7878").unwrap();
+// #[get("/")]
+// fn index() -> &'static str {
+//     "Hello, world!"
+// }
 
-    for stream in listener.incoming() {
-        let stream = stream.unwrap();
-
-        thread::spawn(|| {
-            handle_connection(stream);
-        });
+#[get("/<file..>")]
+pub async fn files(file: PathBuf) -> Option<NamedFile> {
+    println!("path arg: {}", file.display());
+    let mut path = Path::new(relative!("build")).join(file);
+    if path.is_dir() {
+        path = Path::new("./build").join("index.html");
     }
+    NamedFile::open(path).await.ok()
+}
+#[get("/")]
+pub async fn index() -> Option<NamedFile> {
+    NamedFile::open(Path::new("./build/index.html")).await.ok()
 }
 
-fn handle_connection(mut stream: TcpStream) {
-    let mut buffer = [0; 1024];
-    stream.read(&mut buffer).unwrap();
-
-    let get = b"GET / HTTP/1.1\r\n";
-    let sleep = b"GET /caca HTTP/1.1\r\n";
-
-    let (status_line, filename) = if buffer.starts_with(get) {
-        ("HTTP/1.1 200 OK", "hello.html")
-    } else if buffer.starts_with(sleep) {
-        thread::sleep(Duration::from_secs(5));
-        ("HTTP/1.1 200 OK", "hello.html")
-    } else {
-        ("HTTP/1.1 404 NOT FOUND", "404.html")
-    };
-
-    let contents = fs::read_to_string(filename).unwrap();
-
-    let response = format!(
-        "{}\r\nContent-Length: {}\r\n\r\n{}",
-        status_line,
-        contents.len(),
-        contents
-    );
-
-    stream.write(response.as_bytes()).unwrap();
-    stream.flush().unwrap();
+#[launch]
+fn rocket() -> Rocket<Build>{
+    rocket::build().mount("/", routes![index, files])
 }

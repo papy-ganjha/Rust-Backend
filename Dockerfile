@@ -6,6 +6,7 @@ WORKDIR /app
 COPY ./ ./
 
 RUN cargo install cargo-watch
+# RUN rustup toolchain install nightly && rustup default nightly
 
 # Run the binary
 EXPOSE 7878
