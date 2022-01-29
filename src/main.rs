@@ -3,10 +3,6 @@ use rocket::{Build, Rocket};
 use rocket::fs::{NamedFile, relative};
 use std::path::{PathBuf, Path};
 
-// #[get("/")]
-// fn index() -> &'static str {
-//     "Hello, world!"
-// }
 
 #[get("/<file..>")]
 pub async fn files(file: PathBuf) -> Option<NamedFile> {
@@ -15,14 +11,15 @@ pub async fn files(file: PathBuf) -> Option<NamedFile> {
     if path.is_dir() {
         path = Path::new("./build").join("index.html");
     }
-    NamedFile::open(path).await.ok()
-}
-#[get("/")]
-pub async fn index() -> Option<NamedFile> {
-    NamedFile::open(Path::new("./build/index.html")).await.ok()
+    let result = NamedFile::open(path).await.ok();
+    match result {
+        None => NamedFile::open("./build/index.html").await.ok(),
+        _ => result
+
+    }
 }
 
 #[launch]
 fn rocket() -> Rocket<Build>{
-    rocket::build().mount("/", routes![index, files])
+    rocket::build().mount("/", routes![files])
 }
